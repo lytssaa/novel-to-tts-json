@@ -351,11 +351,10 @@ def fidelity_check(txt_path, json_path):
                 + '; '.join(missing_paragraphs[:3])
             )
 
-    # --- 语气标签检查（逐条，不按比例） ---
-    EMOTION_KEYWORDS = ['！','？','哼','呸','岂','怎','杀','仇','贼','哭','怒','恨','怕','急','混账','住口','岂有此理','不要','不得','快','糟']
+    # --- 语气标签检查（角色台词应加标签，旁白不加） ---
     dialogue_total = 0
     dialogue_tagged = 0
-    untagged_emotional = []
+    untagged_dialogue = []
 
     for i, s in enumerate(script):
         if s.get('speaker') == '旁白':
@@ -366,19 +365,19 @@ def fidelity_check(txt_path, json_path):
         if has_tag:
             dialogue_tagged += 1
         else:
-            if any(w in content for w in EMOTION_KEYWORDS):
-                untagged_emotional.append(f'script[{i}] {s["speaker"]}: {content[:40]}...')
+            untagged_dialogue.append(f'script[{i}] {s["speaker"]}: {content[:40]}...')
 
-    # 只要有含情绪词但没标签的台词就报软警告，超过5条报硬失败
-    if len(untagged_emotional) >= 5:
+    # 角色台词无标签≥5条硬失败，1-4条软警告
+    if len(untagged_dialogue) >= 5:
         hard_issues.append(
-            f'语气标签缺失严重: {len(untagged_emotional)}条含情绪词的台词未加标签。'
-            f'如: {"; ".join(untagged_emotional[:3])}'
+            f'角色台词缺少语气标签: {len(untagged_dialogue)}条台词未加标签(共{dialogue_total}条)。'
+            f'角色台词应加语气标签如[低声][愤怒][悲伤]等。'
+            f'如: {"; ".join(untagged_dialogue[:3])}'
         )
-    elif len(untagged_emotional) >= 1:
+    elif len(untagged_dialogue) >= 1:
         soft_issues.append(
-            f'有{len(untagged_emotional)}条含情绪词的台词未加标签: '
-            + '; '.join(untagged_emotional[:3])
+            f'有{len(untagged_dialogue)}条角色台词未加语气标签: '
+            + '; '.join(untagged_dialogue[:3])
         )
 
     return {
