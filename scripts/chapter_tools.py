@@ -351,11 +351,11 @@ def fidelity_check(txt_path, json_path):
                 + '; '.join(missing_paragraphs[:3])
             )
 
-    # --- 语气标签覆盖率检查 ---
+    # --- 语气标签检查（逐条，不按比例） ---
     EMOTION_KEYWORDS = ['！','？','哼','呸','岂','怎','杀','仇','贼','哭','怒','恨','怕','急','混账','住口','岂有此理','不要','不得','快','糟']
     dialogue_total = 0
     dialogue_tagged = 0
-    dialogue_untagged_emotional = []
+    untagged_emotional = []
 
     for i, s in enumerate(script):
         if s.get('speaker') == '旁白':
@@ -367,24 +367,18 @@ def fidelity_check(txt_path, json_path):
             dialogue_tagged += 1
         else:
             if any(w in content for w in EMOTION_KEYWORDS):
-                dialogue_untagged_emotional.append(f'script[{i}] {s["speaker"]}: {content[:40]}...')
+                untagged_emotional.append(f'script[{i}] {s["speaker"]}: {content[:40]}...')
 
-    if dialogue_total > 0:
-        tag_ratio = dialogue_tagged / dialogue_total
-    else:
-        tag_ratio = 1.0
-
-    if tag_ratio < 0.15:
+    # 只要有含情绪词但没标签的台词就报软警告，超过5条报硬失败
+    if len(untagged_emotional) >= 5:
         hard_issues.append(
-            f'语气标签覆盖率极低 ({tag_ratio:.0%}): '
-            f'台词{dialogue_total}条中仅{dialogue_tagged}条有标签。'
-            f'含情绪但无标签的台词如: {"; ".join(dialogue_untagged_emotional[:3])}'
+            f'语气标签缺失严重: {len(untagged_emotional)}条含情绪词的台词未加标签。'
+            f'如: {"; ".join(untagged_emotional[:3])}'
         )
-    elif tag_ratio < 0.30:
+    elif len(untagged_emotional) >= 1:
         soft_issues.append(
-            f'语气标签覆盖率偏低 ({tag_ratio:.0%}): '
-            f'台词{dialogue_total}条中仅{dialogue_tagged}条有标签，'
-            f'建议给含感叹号/情绪词的台词补充标签'
+            f'有{len(untagged_emotional)}条含情绪词的台词未加标签: '
+            + '; '.join(untagged_emotional[:3])
         )
 
     return {
@@ -398,7 +392,7 @@ def fidelity_check(txt_path, json_path):
         'coverage_ratio': f'{coverage_ratio:.0%}',
         'txt_cn_count': txt_cn_count,
         'json_cn_count': json_cn_count,
-        'tag_ratio': f'{tag_ratio:.0%}',
+        'tag_ratio': f'{dialogue_tagged}/{dialogue_total}',
         'hard_issues': hard_issues,
         'soft_issues': soft_issues,
         'issues': hard_issues + soft_issues  # 向后兼容
