@@ -287,6 +287,70 @@ def fidelity_check(txt_path, json_path):
     if long_contents:
         hard_issues.extend(long_contents[:5])
 
+    # --- 字数覆盖率检查 ---
+    txt_cn_count = len(re.findall(r'[\u4e00-\u9fff]', txt_content))
+    json_cn_count = 0
+    for s in script:
+        content = re.sub(r'^\[[^\]]+\]', '', s.get('content', ''))
+        json_cn_count += len(re.findall(r'[\u4e00-\u9fff]', content))
+
+    if txt_cn_count > 0:
+        coverage_ratio = json_cn_count / txt_cn_count
+    else:
+        coverage_ratio = 1.0
+
+    if coverage_ratio < 0.90:
+        hard_issues.append(
+            f'字数覆盖率低 ({coverage_ratio:.0%}): '
+            f'TXT={txt_cn_count}字 vs JSON={json_cn_count}字，'
+            f'可能有 {txt_cn_count - json_cn_count}字内容遗漏'
+        )
+    elif coverage_ratio < 0.95:
+        soft_issues.append(
+            f'字数覆盖率偏低 ({coverage_ratio:.0%})，可能有少量内容压缩'
+        )
+
+    # --- 段落采样检查 ---
+    # 把 TXT 按换行分段，从中均匀采样若干段，检查关键词是否在 JSON 中出现
+    json_full_text = ''
+    for s in script:
+        c = re.sub(r'^\[[^\]]+\]', '', s.get('content', ''))
+        json_full_text += c
+
+    paragraphs = [p.strip() for p in txt_content.split('\n') if p.strip() and len(p.strip()) > 30]
+    if paragraphs:
+        # 均匀采样：取 1/4, 2/4, 3/4 位置的段落（不取头尾，头尾已被末句检查覆盖）
+        sample_indices = []
+        if len(paragraphs) >= 4:
+            for frac in [0.25, 0.5, 0.75]:
+                idx = int(len(paragraphs) * frac)
+                sample_indices.append(idx)
+        elif len(paragraphs) >= 2:
+            sample_indices.append(len(paragraphs) // 2)
+
+        missing_paragraphs = []
+        for idx in sample_indices:
+            para = paragraphs[idx]
+            # 去掉引号和说话者标识（"XXX道："、"XXX叫道："等），这些在转换时会被移到 speaker 字段
+            para_clean = re.sub(r'[\u201c\u201d\u300c\u300d\u300e\u300f]', '', para)  # 去引号
+            para_clean = re.sub(r'[\u4e00-\u9fff]{2,6}(?:道|叫道|大怒道|嚷道|大喝道|骂道|说|笑道|问道|答道|喊道)[：:]', '', para_clean)
+            # 取前 15 个汉字作为搜索关键词
+            cn_chars = re.findall(r'[\u4e00-\u9fff]', para_clean)
+            if len(cn_chars) < 8:
+                continue
+            search_key = ''.join(cn_chars[:15])
+            # 在 JSON 全文（去标点）中搜索
+            json_nopunc = re.sub(r'[，。！？、；：""''\u201c\u201d\u300c\u300d]', '', json_full_text)
+            if search_key not in json_nopunc:
+                missing_paragraphs.append(f'段落"{para[:40]}..."的关键词未在JSON中找到')
+
+        # 段落采样作为软警告（对话密集章节容易因拆分方式不同而误报）
+        if missing_paragraphs:
+            soft_issues.append(
+                f'段落采样检查发现 {len(missing_paragraphs)} 处内容可能遗漏: '
+                + '; '.join(missing_paragraphs[:3])
+            )
+
     return {
         'pass': len(hard_issues) == 0,
         'txt_last': txt_last[-50:] if txt_last else '(空)',
@@ -295,6 +359,9 @@ def fidelity_check(txt_path, json_path):
         'json_dialogue_count': json_dialogue_count,
         'quote_diff': quote_diff,
         'overlap_ratio': f'{overlap_ratio:.0%}',
+        'coverage_ratio': f'{coverage_ratio:.0%}',
+        'txt_cn_count': txt_cn_count,
+        'json_cn_count': json_cn_count,
         'hard_issues': hard_issues,
         'soft_issues': soft_issues,
         'issues': hard_issues + soft_issues  # 向后兼容
@@ -357,7 +424,7 @@ def batch_check(txt_dir, json_dir):
             results.append({
                 'chapter': txt_file,
                 'status': 'PASS',
-                'detail': f'末句重叠{result["overlap_ratio"]}, 台词偏差{result["quote_diff"]}'
+                'detail': f'末句重叠{result["overlap_ratio"]}, 覆盖率{result["coverage_ratio"]}, 台词偏差{result["quote_diff"]}'
             })
             pass_count += 1
         else:
@@ -426,6 +493,7 @@ def main():
         print(f'TXT 台词数:  {result["txt_quote_count"]}')
         print(f'JSON 台词数: {result["json_dialogue_count"]} (偏差 {result["quote_diff"]})')
         print(f'末句重叠率: {result["overlap_ratio"]}')
+        print(f'字数覆盖率: {result["coverage_ratio"]} (TXT {result.get("txt_cn_count","?")}字 / JSON {result.get("json_cn_count","?")}字)')
         if result.get('hard_issues'):
             print('\n硬失败（需重试）:')
             for issue in result['hard_issues']:
@@ -438,6 +506,14 @@ def main():
 
         if not result['pass']:
             sys.exit(1)
+
+    elif command == 'batch_check':
+        if len(sys.argv) < 4:
+            print('用法: python chapter_tools.py batch_check <章节txt目录> <json目录>')
+            sys.exit(1)
+        txt_dir = sys.argv[2]
+        json_dir = sys.argv[3]
+        batch_check(txt_dir, json_dir)
 
     elif command == 'progress':
         if len(sys.argv) < 4:
