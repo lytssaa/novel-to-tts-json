@@ -299,13 +299,13 @@ def fidelity_check(txt_path, json_path):
     else:
         coverage_ratio = 1.0
 
-    if coverage_ratio < 0.90:
+    if coverage_ratio < 0.92:
         hard_issues.append(
             f'字数覆盖率低 ({coverage_ratio:.0%}): '
             f'TXT={txt_cn_count}字 vs JSON={json_cn_count}字，'
             f'可能有 {txt_cn_count - json_cn_count}字内容遗漏'
         )
-    elif coverage_ratio < 0.95:
+    elif coverage_ratio < 0.96:
         soft_issues.append(
             f'字数覆盖率偏低 ({coverage_ratio:.0%})，可能有少量内容压缩'
         )
