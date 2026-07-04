@@ -264,7 +264,7 @@ def fidelity_check(txt_path, json_path):
 
     # 检查 JSON 字段完整性
     field_issues = []
-    required_fields = {'speaker', 'content', 'emo_vector', 'delay'}
+    required_fields = {'speaker', 'content', 'emo_vector', 'delay', 'ref_emotion'}
     for i, s in enumerate(script):
         missing = required_fields - set(s.keys())
         if missing:

@@ -29,12 +29,13 @@
 
 ## 三、script 字段（必须严格遵守！）
 
-每个对象包含且仅包含以下四个字段：
+每个对象包含且仅包含以下五个字段：
 
 1. `speaker`: "旁白" 或角色名
 2. `content`: 台词或旁白内容
 3. `emo_vector`: **固定全 0 的 8 元素数组** `[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]`（必须存在，不可省略，不可用对象格式）
 4. `delay`: 毫秒数（必须使用以下默认值，禁止随意填）
+5. `ref_emotion`: 固定填 `"中性"`（必须存在，app 校验用，Fish Audio 不使用此字段）
 
 ## 四、delay 强制默认值（禁止随意填写！）
 
@@ -159,37 +160,43 @@
       "speaker": "旁白",
       "content": "夜色如墨，寒风呼啸。",
       "emo_vector": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-      "delay": 800
+      "delay": 800,
+      "ref_emotion": "中性"
     },
     {
       "speaker": "旁白",
       "content": "李昂独自走在空旷的街道上。",
       "emo_vector": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-      "delay": 800
+      "delay": 800,
+      "ref_emotion": "中性"
     },
     {
       "speaker": "店小二",
-      "content": "客官，要住店吗？",
+      "content": "[low voice]客官，要住店吗？",
       "emo_vector": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-      "delay": 500
+      "delay": 500,
+      "ref_emotion": "中性"
     },
     {
       "speaker": "旁白",
       "content": "一个殷勤的声音从身后传来。",
       "emo_vector": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-      "delay": 800
+      "delay": 800,
+      "ref_emotion": "中性"
     },
     {
       "speaker": "李昂",
       "content": "[whisper]不用了。",
       "emo_vector": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-      "delay": 500
+      "delay": 500,
+      "ref_emotion": "中性"
     },
     {
       "speaker": "旁白",
       "content": "他头也不回，继续往前走。",
       "emo_vector": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-      "delay": 800
+      "delay": 800,
+      "ref_emotion": "中性"
     }
   ]
 }
@@ -208,7 +215,7 @@
 | 7 | JSON 纯净性 | 纯 JSON，无包裹 | ` ```json ... ``` ` |
 | 8 | 播客头尾 | 已纳入 JSON（播客头尾是文件组成部分） | 擅自剥离播客头尾 |
 | 9 | 角色名一致 | 全文同一角色同名词 | 林廷扬/总镖头/狮子林 混用 |
-| 10 | 四字段完整 | speaker, content, emo_vector, delay 全有 | 漏掉 delay 或 emo_vector |
+| 10 | 五字段完整 | speaker, content, emo_vector, delay, ref_emotion 全有 | 漏掉 delay/emo_vector/ref_emotion |
 | 11 | 台词语气标签 | 含感叹号/情绪词的台词必须加 `[标签]` | 全部台词无标签，平淡如水 |
 
 ## 转换指令模板

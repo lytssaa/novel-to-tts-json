@@ -17,6 +17,7 @@ Fish Audio S2.1 Pro 的特点：通过参考音频克隆音色，支持局部语
 2. content: 台词或旁白内容
 3. emo_vector: 固定全0 [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]（必须存在）
 4. delay: 毫秒数（必须使用以下默认值，禁止随意填）
+5. ref_emotion: 固定填"中性"（必须存在，app校验用，Fish Audio不使用此字段）
 四、delay 强制默认值（禁止随意填写！）
 - 旁白段落之间: 800ms（区间600-1000）
 - 角色对话前置: 500ms（区间400-800）
@@ -95,12 +96,12 @@ Fish Audio S2.1 Pro 的特点：通过参考音频克隆音色，支持局部语
     }
   },
   "script": [
-    {"speaker": "旁白", "content": "夜色如墨，寒风呼啸。", "emo_vector": [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "delay": 800},
-    {"speaker": "旁白", "content": "李昂独自走在空旷的街道上。", "emo_vector": [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "delay": 800},
-    {"speaker": "店小二", "content": "[low voice]客官，要住店吗？", "emo_vector": [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "delay": 500},
-    {"speaker": "旁白", "content": "一个殷勤的声音从身后传来。", "emo_vector": [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "delay": 800},
-    {"speaker": "李昂", "content": "[whisper]不用了。", "emo_vector": [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "delay": 500},
-    {"speaker": "旁白", "content": "他头也不回，继续往前走。", "emo_vector": [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "delay": 800}
+    {"speaker": "旁白", "content": "夜色如墨，寒风呼啸。", "emo_vector": [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "delay": 800, "ref_emotion": "中性"},
+    {"speaker": "旁白", "content": "李昂独自走在空旷的街道上。", "emo_vector": [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "delay": 800, "ref_emotion": "中性"},
+    {"speaker": "店小二", "content": "[low voice]客官，要住店吗？", "emo_vector": [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "delay": 500, "ref_emotion": "中性"},
+    {"speaker": "旁白", "content": "一个殷勤的声音从身后传来。", "emo_vector": [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "delay": 800, "ref_emotion": "中性"},
+    {"speaker": "李昂", "content": "[whisper]不用了。", "emo_vector": [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "delay": 500, "ref_emotion": "中性"},
+    {"speaker": "旁白", "content": "他头也不回，继续往前走。", "emo_vector": [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "delay": 800, "ref_emotion": "中性"}
   ]
 }
 （小说内容）
