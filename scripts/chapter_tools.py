@@ -264,14 +264,12 @@ def fidelity_check(txt_path, json_path):
 
     # 检查 JSON 字段完整性
     field_issues = []
-    required_fields = {'speaker', 'content', 'emo_vector', 'delay', 'ref_emotion'}
+    # LLM输出3字段(speaker/content/delay)，fix_all后补到5字段，两种都接受
+    required_fields = {'speaker', 'content', 'delay'}
     for i, s in enumerate(script):
         missing = required_fields - set(s.keys())
         if missing:
             field_issues.append(f'script[{i}] 缺少字段: {missing}')
-        extra = set(s.keys()) - required_fields
-        if extra:
-            field_issues.append(f'script[{i}] 多余字段: {extra}')
 
     if field_issues:
         hard_issues.extend(field_issues[:5])  # 只报前5个
