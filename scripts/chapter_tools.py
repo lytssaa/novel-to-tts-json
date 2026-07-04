@@ -379,6 +379,19 @@ def fidelity_check(txt_path, json_path):
             + '; '.join(untagged_dialogue[:3])
         )
 
+    # --- 收集报告数据 ---
+    char_count = len(json_data.get('character_map', {}))
+    delay_dist = {}
+    tag_dist = {}
+    for s in script:
+        d = s.get('delay', 0)
+        delay_dist[d] = delay_dist.get(d, 0) + 1
+        content = s.get('content', '')
+        tag_match = re.match(r'^\[([^\]]+)\]', content)
+        if tag_match:
+            t = tag_match.group(1)
+            tag_dist[t] = tag_dist.get(t, 0) + 1
+
     return {
         'pass': len(hard_issues) == 0,
         'txt_last': txt_last[-50:] if txt_last else '(空)',
@@ -391,10 +404,77 @@ def fidelity_check(txt_path, json_path):
         'txt_cn_count': txt_cn_count,
         'json_cn_count': json_cn_count,
         'tag_ratio': f'{dialogue_tagged}/{dialogue_total}',
+        'char_count': char_count,
+        'delay_dist': delay_dist,
+        'tag_dist': tag_dist,
         'hard_issues': hard_issues,
         'soft_issues': soft_issues,
         'issues': hard_issues + soft_issues  # 向后兼容
     }
+
+
+def print_report(result, json_path=None):
+    """输出章节质量报告表格"""
+    status = '✅ 通过' if result['pass'] else '❌ 未通过'
+
+    # 收集表格行
+    lines = []
+    lines.append('')
+    lines.append('=' * 60)
+    lines.append('📊 章节转换质量报告')
+    lines.append('=' * 60)
+    lines.append(f'  {"状态":<12} {status}')
+
+    if json_path:
+        lines.append(f'  {"文件":<12} {os.path.basename(json_path)}')
+
+    lines.append(f'  {"字数覆盖率":<12} {result["coverage_ratio"]} ({result.get("json_cn_count","?")}/{result.get("txt_cn_count","?")}字)')
+    lines.append(f'  {"script条数":<12} {result["json_dialogue_count"]} 条')
+    lines.append(f'  {"角色数量":<12} {result.get("char_count", "?")} 个')
+
+    # 语气标签
+    tag_ratio = result.get('tag_ratio', '?/???')
+    parts = tag_ratio.split('/')
+    if len(parts) == 2:
+        try:
+            tagged, total = int(parts[0]), int(parts[1])
+            tag_pct = f'{tagged}/{total} ({tagged/total*100:.0f}%)' if total > 0 else '0/0'
+        except:
+            tag_pct = tag_ratio
+    else:
+        tag_pct = tag_ratio
+    lines.append(f'  {"台词标签":<12} {tag_pct}')
+
+    # 标签分布
+    tag_dist = result.get('tag_dist', {})
+    if tag_dist:
+        top_tags = sorted(tag_dist.items(), key=lambda x: -x[1])[:5]
+        tag_str = ', '.join(f'[{t}]{c}' for t, c in top_tags)
+        lines.append(f'  {"标签TOP5":<12} {tag_str}')
+
+    # delay 分布
+    delay_dist = result.get('delay_dist', {})
+    if delay_dist:
+        delay_parts = []
+        for d in [800, 500, 1500, 2000]:
+            if d in delay_dist:
+                label = {800: '旁白', 500: '对话', 1500: '转折', 2000: '场景'}.get(d, str(d))
+                delay_parts.append(f'{label}={delay_dist[d]}条')
+        if delay_parts:
+            lines.append(f'  {"delay分布":<12} {", ".join(delay_parts)}')
+
+    # 问题摘要
+    if result.get('hard_issues'):
+        lines.append(f'  {"硬失败":<12} {len(result["hard_issues"])} 项')
+        for issue in result['hard_issues'][:2]:
+            lines.append(f'    ⚠ {issue[:60]}')
+    if result.get('soft_issues'):
+        lines.append(f'  {"警告":<12} {len(result["soft_issues"])} 项')
+        for issue in result['soft_issues'][:2]:
+            lines.append(f'    ⓘ {issue[:60]}')
+
+    lines.append('=' * 60)
+    print('\n'.join(lines))
 
 
 def batch_check(txt_dir, json_dir):
@@ -532,6 +612,9 @@ def main():
             for issue in result['soft_issues']:
                 print(f'  - {issue}')
         print('=' * 60)
+
+        # 输出质量报告表格
+        print_report(result, json_path)
 
         if not result['pass']:
             sys.exit(1)
