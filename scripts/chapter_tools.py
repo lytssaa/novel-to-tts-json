@@ -530,32 +530,68 @@ def batch_check(txt_dir, json_dir):
         result = fidelity_check(txt_path, json_path)
 
         if result['pass']:
+            # 解析标签率
+            tag_ratio = result.get('tag_ratio', '?/?')
             results.append({
                 'chapter': txt_file,
                 'status': 'PASS',
-                'detail': f'末句重叠{result["overlap_ratio"]}, 覆盖率{result["coverage_ratio"]}, 台词偏差{result["quote_diff"]}'
+                'coverage': result['coverage_ratio'],
+                'script_count': result['json_dialogue_count'],
+                'char_count': result.get('char_count', 0),
+                'tag_ratio': tag_ratio,
+                'detail': f'台词偏差{result["quote_diff"]}'
             })
             pass_count += 1
         else:
             results.append({
                 'chapter': txt_file,
                 'status': 'FAIL',
-                'detail': '; '.join(result['issues'])
+                'coverage': result.get('coverage_ratio', '?'),
+                'script_count': result['json_dialogue_count'],
+                'char_count': result.get('char_count', 0),
+                'tag_ratio': result.get('tag_ratio', '?/?'),
+                'detail': '; '.join(result['issues'][:2])
             })
             fail_count += 1
 
     # 输出报告
-    print('=' * 70)
-    print('FIDELITY GATE 批量检查报告')
-    print('=' * 70)
-    print(f'总计: {len(results)} 章 | 通过: {pass_count} | 未通过: {fail_count}')
-    print('-' * 70)
-    print(f'{"章节":<40s} {"状态":<12s} {"详情"}')
-    print('-' * 70)
+    print()
+    print('━' * 66)
+    print('  FIDELITY GATE 批量检查报告')
+    print('━' * 66)
+    print(f'  总计: {len(results)} 章 | 通过: {pass_count} | 未通过: {fail_count}')
+    print()
     for r in results:
-        status_icon = {'PASS': '✓通过', 'FAIL': '✗未通过', 'MISSING_JSON': '⚠缺JSON'}[r['status']]
-        print(f'{r["chapter"][:38]:<40s} {status_icon:<12s} {r["detail"]}')
-    print('=' * 70)
+        status_icon = '✅' if r['status'] == 'PASS' else ('❌' if r['status'] == 'FAIL' else '⚠️')
+        # 缩写章节名（取第2个__之后的和上中下）
+        ch = r['chapter'].replace('.txt', '')
+        parts = ch.split('__')
+        if len(parts) >= 2:
+            short = parts[-1]  # 最后的"xxx_上"部分
+            ch_short = f'{parts[0]} {short}'
+        else:
+            ch_short = ch
+        # 标签率
+        tag = r.get('tag_ratio', '?/?')
+        coverage = r.get('coverage', '??%')
+        detail = r.get('detail', '')
+        print(f'  {status_icon} {ch_short:<28s} 覆盖率{coverage:<5s} 脚本{r["script_count"]:<4d}条 角色{r.get("char_count",0):<2d}个 标签{tag:<8s} {detail[:40]}')
+    print('━' * 66)
+
+    # 汇总统计
+    if pass_count > 0:
+        coverages = []
+        tag_ratios = []
+        for r in results:
+            if r['status'] == 'PASS' and r.get('coverage', '').endswith('%'):
+                try:
+                    coverages.append(int(r['coverage'].replace('%', '')))
+                except:
+                    pass
+        avg_cov = sum(coverages) / len(coverages) if coverages else 0
+        print(f'  通过率 {pass_count}/{len(results)} | 平均覆盖率 {avg_cov:.0f}%')
+    print('━' * 66)
+    print()
 
     return results
 
